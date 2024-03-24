@@ -9,10 +9,12 @@ import com.onedayoffer.taskdistribution.repositories.entities.Employee;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.modelmapper.TypeToken;
 import org.springframework.data.domain.Sort;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
+import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 
@@ -33,13 +35,16 @@ public class EmployeeService {
         } else {
             return Collections.emptyList();
         }
+        Type listType = new TypeToken<List<EmployeeDTO>>() {}.getType();
+        return modelMapper.map(employees, listType);
+        /*
         return employees.stream().map(emp ->
                 new EmployeeDTO(emp.getFio(),
                         emp.getJobTitle(),
                         emp.getTasks().stream().map(t -> TaskDTO.builder().id(t.getId()).name(t.getName())
                                 .taskType(t.getTaskType()).status(t.getStatus()).priority(t.getPriority()).leadTime(t.getLeadTime()).build()).toList()
                 )).toList();
-
+        */
 
 
         //throw new java.lang.UnsupportedOperationException("implement getEmployees");
