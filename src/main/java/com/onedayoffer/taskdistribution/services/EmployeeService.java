@@ -3,6 +3,7 @@ package com.onedayoffer.taskdistribution.services;
 import com.onedayoffer.taskdistribution.DTO.EmployeeDTO;
 import com.onedayoffer.taskdistribution.DTO.TaskDTO;
 import com.onedayoffer.taskdistribution.DTO.TaskStatus;
+import com.onedayoffer.taskdistribution.exception.RepositoryException;
 import com.onedayoffer.taskdistribution.exception.ServiceException;
 import com.onedayoffer.taskdistribution.repositories.EmployeeRepository;
 import com.onedayoffer.taskdistribution.repositories.TaskRepository;
@@ -16,7 +17,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
-import javax.sql.rowset.serial.SerialException;
 import java.lang.reflect.Type;
 import java.util.List;
 
@@ -32,9 +32,9 @@ public class EmployeeService {
         List<Employee> employees;
         try {
             if ("DESC".equals(sortDirection)) {
-                employees = employeeRepository.findAllAndSort(Sort.by(Sort.Direction.ASC, "fio"));
+                employees = employeeRepository.findAllAndSort(Sort.by(Sort.Direction.DESC, "fio"));
             } else {
-                employees = employeeRepository.findAllAndSort(Sort.by(Sort.Direction.ASC, "fio"));
+                employees = employeeRepository.findAll(Sort.by(Sort.Direction.ASC, "fio"));
             }
         } catch (Exception e) {
             throw new ServiceException("implement getEmployees", e);
@@ -46,8 +46,10 @@ public class EmployeeService {
     @Transactional
     public EmployeeDTO getOneEmployee(Integer id) throws ServiceException {
         try {
-            var employee = employeeRepository.findEmployeeById(id);
-            return modelMapper.map(employee, EmployeeDTO.class);
+            var employeeOptional = employeeRepository.findById(id);
+            return employeeOptional
+                    .map(employee -> modelMapper.map(employee, EmployeeDTO.class))
+                    .orElseThrow(() -> new RepositoryException(String.format("Employee id=%s not found", id)));
         } catch (Exception e) {
         throw new ServiceException("implement getOneEmployee", e);
         }
@@ -75,12 +77,22 @@ public class EmployeeService {
     @Transactional
     public void postNewTask(Integer employeeId, TaskDTO newTaskDTO) throws ServiceException {
         try {
-            var employee = employeeRepository.findEmployeeById(employeeId);
             Task newTask = modelMapper.map(newTaskDTO, Task.class);
+            Employee employee = employeeRepository.findById(employeeId)
+                    .orElseThrow(() -> new RepositoryException(String.format("Employee id=%s not found", employeeId)));
             newTask.setEmployee(employee);
             taskRepository.save(newTask);
         } catch (Exception e) {
             throw new ServiceException("implement postNewTask", e);
         }
     }
+
+    /*
+            Task task = modelMapper.map(newTask, Task.class);
+        Employee employee = employeeRepository.findById(employeeId)
+                                              .orElseThrow(() -> new NotFoundException(
+                                                      String.format("Employee '%s' not found", employeeId)));
+        task.setEmployee(employee);
+        taskRepository.save(task);
+     */
 }
