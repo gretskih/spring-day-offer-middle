@@ -3,17 +3,21 @@ package com.onedayoffer.taskdistribution.services;
 import com.onedayoffer.taskdistribution.DTO.EmployeeDTO;
 import com.onedayoffer.taskdistribution.DTO.TaskDTO;
 import com.onedayoffer.taskdistribution.DTO.TaskStatus;
+import com.onedayoffer.taskdistribution.exception.ServiceException;
 import com.onedayoffer.taskdistribution.repositories.EmployeeRepository;
 import com.onedayoffer.taskdistribution.repositories.TaskRepository;
 import com.onedayoffer.taskdistribution.repositories.entities.Employee;
+import com.onedayoffer.taskdistribution.repositories.entities.Task;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.modelmapper.TypeToken;
 import org.springframework.data.domain.Sort;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
+import javax.sql.rowset.serial.SerialException;
+import java.lang.reflect.Type;
 import java.util.List;
 
 @Service
@@ -24,50 +28,59 @@ public class EmployeeService {
     private final TaskRepository taskRepository;
     private final ModelMapper modelMapper;
 
-    public List<EmployeeDTO> getEmployees(@Nullable String sortDirection) {
+    public List<EmployeeDTO> getEmployees(@Nullable String sortDirection) throws ServiceException {
         List<Employee> employees;
-        if ("ASC".equals(sortDirection)) {
-            employees = employeeRepository.findAllAndSort(Sort.by(Sort.Direction.ASC, "fio"));
-        } else if ("DESC".equals(sortDirection)){
-            employees = employeeRepository.findAllAndSort(Sort.by(Sort.Direction.DESC, "fio"));
-        } else {
-            return Collections.emptyList();
+        try {
+            if ("DESC".equals(sortDirection)) {
+                employees = employeeRepository.findAllAndSort(Sort.by(Sort.Direction.ASC, "fio"));
+            } else {
+                employees = employeeRepository.findAllAndSort(Sort.by(Sort.Direction.ASC, "fio"));
+            }
+        } catch (Exception e) {
+            throw new ServiceException("implement getEmployees", e);
         }
-        return employees.stream().map(emp ->
-                new EmployeeDTO(emp.getFio(),
-                        emp.getJobTitle(),
-                        emp.getTasks().stream().map(t -> TaskDTO.builder().id(t.getId()).name(t.getName())
-                                .taskType(t.getTaskType()).status(t.getStatus()).priority(t.getPriority()).leadTime(t.getLeadTime()).build()).toList()
-                )).toList();
-
-
-
-        //throw new java.lang.UnsupportedOperationException("implement getEmployees");
-
-        // if sortDirection.isPresent() ..
-        // Sort.Direction direction = ...
-        // employees = employeeRepository.findAllAndSort(Sort.by(direction, "fio"))
-        // employees = employeeRepository.findAll()
-        // Type listType = new TypeToken<List<EmployeeDTO>>() {}.getType()
-        // List<EmployeeDTO> employeeDTOS = modelMapper.map(employees, listType)
+        Type listType = new TypeToken<List<EmployeeDTO>>() {}.getType();
+        return modelMapper.map(employees, listType);
     }
 
     @Transactional
-    public EmployeeDTO getOneEmployee(Integer id) {
-        throw new java.lang.UnsupportedOperationException("implement getOneEmployee");
+    public EmployeeDTO getOneEmployee(Integer id) throws ServiceException {
+        try {
+            var employee = employeeRepository.findEmployeeById(id);
+            return modelMapper.map(employee, EmployeeDTO.class);
+        } catch (Exception e) {
+        throw new ServiceException("implement getOneEmployee", e);
+        }
     }
 
-    public List<TaskDTO> getTasksByEmployeeId(Integer id) {
-        throw new java.lang.UnsupportedOperationException("implement getTasksByEmployeeId");
+    public List<TaskDTO> getTasksByEmployeeId(Integer id) throws ServiceException {
+        try {
+            var taskList = taskRepository.findTaskListByEmployeeId(id);
+            Type listType = new TypeToken<List<TaskDTO>>() {}.getType();
+            return modelMapper.map(taskList, listType);
+        } catch (Exception e) {
+            throw new ServiceException("implement getTasksByEmployeeId", e);
+        }
     }
 
     @Transactional
-    public void changeTaskStatus(Integer taskId, TaskStatus status) {
-        throw new java.lang.UnsupportedOperationException("implement changeTaskStatus");
+    public void changeTaskStatus(Integer taskId, TaskStatus status) throws ServiceException {
+        try {
+            taskRepository.changeTaskStatusById(taskId, status);
+        } catch (Exception e) {
+            throw new ServiceException("implement changeTaskStatus", e);
+        }
     }
 
     @Transactional
-    public void postNewTask(Integer employeeId, TaskDTO newTask) {
-        throw new java.lang.UnsupportedOperationException("implement postNewTask");
+    public void postNewTask(Integer employeeId, TaskDTO newTaskDTO) throws ServiceException {
+        try {
+            var employee = employeeRepository.findEmployeeById(employeeId);
+            Task newTask = modelMapper.map(newTaskDTO, Task.class);
+            newTask.setEmployee(employee);
+            taskRepository.save(newTask);
+        } catch (Exception e) {
+            throw new ServiceException("implement postNewTask", e);
+        }
     }
 }
