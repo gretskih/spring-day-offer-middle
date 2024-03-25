@@ -86,13 +86,4 @@ public class EmployeeService {
             throw new ServiceException("implement postNewTask", e);
         }
     }
-
-    /*
-            Task task = modelMapper.map(newTask, Task.class);
-        Employee employee = employeeRepository.findById(employeeId)
-                                              .orElseThrow(() -> new NotFoundException(
-                                                      String.format("Employee '%s' not found", employeeId)));
-        task.setEmployee(employee);
-        taskRepository.save(task);
-     */
 }
